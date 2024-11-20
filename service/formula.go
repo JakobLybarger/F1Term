@@ -12,18 +12,12 @@ import (
 
 const baseUri = "https://api.openf1.org/v1/"
 
-type FormulaOneEvent struct {
-	Meeting models.Meeting
-	Session models.Session
-	Drivers []models.Driver
-}
-
-func GetLiveData() FormulaOneEvent {
+func GetLiveData() models.Event {
 	meeting := GetMeeting()
 	session := GetSession(meeting.MeetingKey)
 	drivers := GetDrivers()
 
-	return FormulaOneEvent{
+	return models.Event{
 		Meeting: meeting,
 		Session: session,
 		Drivers: drivers,
