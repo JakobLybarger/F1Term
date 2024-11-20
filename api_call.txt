@@ -1,0 +1,16 @@
+Need:
+	- Meeting
+		- meeting_key
+		- meeting_official_name
+
+	- Session (use latest session and meetin)
+		- session name
+		- session_key
+
+	- Drivers 
+		- team name
+		- Full nam
+
+	- Position 
+		- Position
+		- Driver Number
