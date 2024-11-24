@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/JakobLybarger/formula/models"
@@ -14,13 +15,18 @@ const baseUri = "https://api.openf1.org/v1/"
 
 func GetLiveData() models.Event {
 	meeting := GetMeeting()
+
 	session := GetSession(meeting.MeetingKey)
+
 	drivers := GetDrivers()
 
+	positions := GetPositions(meeting.MeetingKey, session.Key)
+
 	return models.Event{
-		Meeting: meeting,
-		Session: session,
-		Drivers: drivers,
+		Meeting:   meeting,
+		Session:   session,
+		Drivers:   drivers,
+		Positions: positions,
 	}
 }
 
@@ -119,4 +125,42 @@ func GetBody(uri string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func GetPositions(meetingKey, sessionKey int) []models.Position {
+	uri := fmt.Sprintf("%s%s%d%s%d", baseUri, "position?meeting_key=", meetingKey, "&session_key=", sessionKey)
+
+	body, err := GetBody(uri)
+	if err != nil {
+		panic(err)
+	}
+
+	var positions []models.Position
+	if err := json.Unmarshal(body, &positions); err != nil {
+		panic(err)
+	}
+
+	sort.Slice(positions, func(i, j int) bool {
+		return positions[i].Date.After(positions[j].Date)
+	})
+
+	driverPositions := make(map[int]models.Position)
+
+	for _, pos := range positions {
+		if _, exists := driverPositions[pos.DriverNumber]; !exists || pos.Date.After(driverPositions[pos.DriverNumber].Date) {
+			driverPositions[pos.DriverNumber] = pos
+		}
+	}
+
+	var res []models.Position
+
+	for _, pos := range driverPositions {
+		res = append(res, pos)
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Position < res[j].Position
+	})
+
+	return res
 }
