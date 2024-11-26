@@ -22,11 +22,14 @@ func GetLiveData() models.Event {
 
 	positions := GetPositions(meeting.MeetingKey, session.Key)
 
+	intervals := GetIntervals(meeting.MeetingKey, session.Key)
+
 	return models.Event{
 		Meeting:   meeting,
 		Session:   session,
 		Drivers:   drivers,
 		Positions: positions,
+		Intervals: intervals,
 	}
 }
 
@@ -163,4 +166,31 @@ func GetPositions(meetingKey, sessionKey int) []models.Position {
 	})
 
 	return res
+}
+
+func GetIntervals(meetingKey, sessionKey int) []models.Interval {
+	uri := fmt.Sprintf("%s%s%d%s%d", baseUri, "intervals?meeting_key=", meetingKey, "&session_key=", sessionKey)
+
+	body, err := GetBody(uri)
+	if err != nil {
+		panic(err)
+	}
+
+	var intervals []models.Interval
+	if err := json.Unmarshal(body, &intervals); err != nil {
+		panic(err)
+	}
+
+	sort.Slice(intervals, func(i, j int) bool {
+		return intervals[i].Date.After(intervals[j].Date)
+	})
+
+	driverIntervals := make(map[int]models.Interval)
+	for _, interval := range intervals {
+		if _, exists := driverIntervals[interval.DriverNumber]; !exists || interval.Date.After(driverIntervals[interval.DriverNumber].Date) {
+			driverIntervals[interval.DriverNumber] = interval
+		}
+	}
+
+	return intervals
 }

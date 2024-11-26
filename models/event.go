@@ -5,4 +5,5 @@ type Event struct {
 	Session   Session
 	Drivers   []Driver
 	Positions []Position
+	Intervals []Interval
 }
