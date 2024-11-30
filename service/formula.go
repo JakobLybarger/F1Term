@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/JakobLybarger/formula/models"
@@ -22,7 +23,10 @@ func GetLiveData() models.Event {
 
 	positions := GetPositions(meeting.MeetingKey, session.Key)
 
-	intervals := GetIntervals(meeting.MeetingKey, session.Key)
+	intervals := make([]models.Interval, 0)
+	if strings.ToLower(meeting.OfficialName) == "race" {
+		intervals = GetIntervals(meeting.MeetingKey, session.Key)
+	}
 
 	return models.Event{
 		Meeting:   meeting,

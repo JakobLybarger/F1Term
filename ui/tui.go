@@ -3,10 +3,12 @@ package ui
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/JakobLybarger/formula/models"
 	"github.com/JakobLybarger/formula/service"
+	"github.com/JakobLybarger/formula/utils"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,11 +17,11 @@ import (
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("#C81D25"))
+	BorderForeground(lipgloss.Color("240"))
 
 func InitialModel() model {
 	s := spinner.New()
-	s.Spinner = spinner.Line
+	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#C81D25"))
 	return model{spinner: s, loading: true}
 }
@@ -67,7 +69,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.event = service.GetLiveData()
 		m.table = loadTable(m.event)
 
-		return m, tickEvery(5)
+		return m, tickEvery(10)
 
 	case spinner.TickMsg:
 		if m.loading {
@@ -82,71 +84,74 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func loadTable(event models.Event) table.Model {
 	columns := []table.Column{
-		{Title: "Position", Width: 10},
+		{Title: "Pos", Width: 3},
 		{Title: "Driver", Width: 10},
 		{Title: "Team", Width: 20},
-		{Title: "Gap to Leader", Width: 20},
+	}
+
+	isRace := strings.ToLower(event.Meeting.OfficialName) == "race"
+
+	if isRace {
+		columns = append(columns, table.Column{
+			Title: "Gap to Leader",
+			Width: 20,
+		})
 	}
 
 	rows := make([]table.Row, 20)
 	for i, position := range event.Positions {
-		driver := getDriver(event.Drivers, position.DriverNumber)
-		intervals := getInterval(event.Intervals, position.DriverNumber)
-		rows[i] = table.Row{
-			strconv.Itoa(position.Position),
-			driver.LastName,
-			driver.TeamName,
-			displayAsString(intervals.GapToLeader),
+		driver := utils.GetDriver(event.Drivers, position.DriverNumber)
+
+		if isRace {
+			intervals := utils.GetInterval(event.Intervals, position.DriverNumber)
+			rows[i] = table.Row{
+				strconv.Itoa(position.Position),
+				driver.NameAcronym,
+				driver.TeamName,
+				utils.DisplayAsString(intervals.GapToLeader),
+			}
+		} else {
+			rows[i] = table.Row{
+				strconv.Itoa(position.Position),
+				driver.NameAcronym,
+				driver.TeamName,
+			}
 		}
 	}
 
 	t := table.New(
 		table.WithColumns(columns),
-		table.WithRows(rows), table.WithHeight(21),
+		table.WithRows(rows),
+		table.WithHeight(40),
 	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+
+	s.Selected = lipgloss.NewStyle()
+
+	s.Cell = s.Cell.
+		Padding(0, 1).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true)
+
+	t.SetStyles(s)
 
 	return t
 }
 
-func displayAsString(val interface{}) string {
-	switch v := val.(type) {
-	case string:
-		return v
-
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-
-	default:
-		return "null"
-	}
-}
-
-func getDriver(drivers []models.Driver, driverNumber int) models.Driver {
-	for _, driver := range drivers {
-		if driver.Number == driverNumber {
-			return driver
-		}
-	}
-
-	return drivers[0]
-}
-
-func getInterval(intervals []models.Interval, driverNumber int) models.Interval {
-	for _, interval := range intervals {
-		if interval.DriverNumber == driverNumber {
-			return interval
-		}
-	}
-
-	return intervals[0]
-}
-
 func (m model) View() string {
 	if m.loading {
-		return fmt.Sprintf("%s Loading...", m.spinner.View())
+		return fmt.Sprintf("\n%s Loading...", m.spinner.View())
 	}
 
-	s := fmt.Sprintf("\n%s - %s\n\n", m.event.Session.Name, m.event.Meeting.OfficialName)
+	s := fmt.Sprintf("\n%s - %s\n", m.event.Meeting.OfficialName, m.event.Session.Name)
+	// s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 	s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 
 	return s
