@@ -152,8 +152,6 @@ func (m model) View() string {
 	}
 
 	s := fmt.Sprintf("\n%s - %s\n", m.event.Meeting.OfficialName, m.event.Session.Name)
-	s += fmt.Sprintf("Last udate time: %s\n", m.lastUpdate)
-	// s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 	s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 
 	return s
