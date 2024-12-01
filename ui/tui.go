@@ -26,7 +26,7 @@ func InitialModel() model {
 	return model{spinner: s, loading: true}
 }
 
-type TickMsg time.Time
+type ApiResponseMsg models.Event
 
 type model struct {
 	lastUpdate time.Time
@@ -47,7 +47,8 @@ func (m model) Init() tea.Cmd {
 func tickEvery(second time.Duration) tea.Cmd {
 	return tea.Every(time.Second*second,
 		func(t time.Time) tea.Msg {
-			return TickMsg(t)
+			event := service.GetLiveData()
+			return ApiResponseMsg(event)
 		})
 }
 
@@ -60,23 +61,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case TickMsg:
-		if m.loading {
-			m.loading = false
-		}
-
-		m.lastUpdate = time.Time(msg)
-		m.event = service.GetLiveData()
-		m.table = loadTable(m.event)
-
-		return m, tickEvery(10)
-
 	case spinner.TickMsg:
 		if m.loading {
 			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
 		}
+
+	case ApiResponseMsg:
+		if m.loading {
+			m.loading = false
+		}
+
+		m.lastUpdate = time.Now()
+		m.event = models.Event(msg)
+		m.table = loadTable(m.event)
+
+		return m, tickEvery(10)
 	}
 
 	return m, nil
@@ -151,6 +152,7 @@ func (m model) View() string {
 	}
 
 	s := fmt.Sprintf("\n%s - %s\n", m.event.Meeting.OfficialName, m.event.Session.Name)
+	s += fmt.Sprintf("Last udate time: %s\n", m.lastUpdate)
 	// s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 	s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
 
