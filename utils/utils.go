@@ -16,14 +16,14 @@ func GetDriver(drivers []models.Driver, driverNumber int) models.Driver {
 	return drivers[0]
 }
 
-func GetInterval(intervals []models.Interval, driverNumber int) models.Interval {
+func GetInterval(intervals []models.Interval, driverNumber int) (models.Interval, bool) {
 	for _, interval := range intervals {
 		if interval.DriverNumber == driverNumber {
-			return interval
+			return interval, true
 		}
 	}
 
-	return intervals[0]
+	return models.Interval{}, false
 }
 
 func DisplayAsString(val interface{}) string {
@@ -35,6 +35,6 @@ func DisplayAsString(val interface{}) string {
 		return strconv.FormatFloat(v, 'f', -1, 64)
 
 	default:
-		return "null"
+		return ""
 	}
 }

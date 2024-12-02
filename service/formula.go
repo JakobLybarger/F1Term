@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -24,7 +25,7 @@ func GetLiveData() models.Event {
 	positions := GetPositions(meeting.MeetingKey, session.Key)
 
 	intervals := make([]models.Interval, 0)
-	if strings.ToLower(meeting.OfficialName) == "race" {
+	if strings.ToLower(session.Name) == "race" {
 		intervals = GetIntervals(meeting.MeetingKey, session.Key)
 	}
 
@@ -182,7 +183,7 @@ func GetIntervals(meetingKey, sessionKey int) []models.Interval {
 
 	var intervals []models.Interval
 	if err := json.Unmarshal(body, &intervals); err != nil {
-		panic(err)
+		log.Fatalf("Error Unmarshaling intervals:\nuri=%s\nbody=%s%v\n", uri, string(body), err)
 	}
 
 	sort.Slice(intervals, func(i, j int) bool {

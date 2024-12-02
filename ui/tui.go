@@ -90,7 +90,7 @@ func loadTable(event models.Event) table.Model {
 		{Title: "Team", Width: 20},
 	}
 
-	isRace := strings.ToLower(event.Meeting.OfficialName) == "race"
+	isRace := strings.ToLower(event.Session.Name) == "race"
 
 	if isRace {
 		columns = append(columns, table.Column{
@@ -103,21 +103,19 @@ func loadTable(event models.Event) table.Model {
 	for i, position := range event.Positions {
 		driver := utils.GetDriver(event.Drivers, position.DriverNumber)
 
+		row := table.Row{
+			strconv.Itoa(position.Position),
+			driver.NameAcronym,
+			driver.TeamName,
+		}
+
 		if isRace {
-			intervals := utils.GetInterval(event.Intervals, position.DriverNumber)
-			rows[i] = table.Row{
-				strconv.Itoa(position.Position),
-				driver.NameAcronym,
-				driver.TeamName,
-				utils.DisplayAsString(intervals.GapToLeader),
-			}
-		} else {
-			rows[i] = table.Row{
-				strconv.Itoa(position.Position),
-				driver.NameAcronym,
-				driver.TeamName,
+			if interval, ok := utils.GetInterval(event.Intervals, position.DriverNumber); ok {
+				row = append(row, utils.DisplayAsString(interval.GapToLeader))
 			}
 		}
+
+		rows[i] = row
 	}
 
 	t := table.New(
