@@ -16,18 +16,27 @@ import (
 const baseUri = "https://api.openf1.org/v1/"
 
 func GetLiveData() models.Event {
+
 	meeting := GetMeeting()
 
 	session := GetSession(meeting.MeetingKey)
 
-	drivers := GetDrivers()
+	driverChan := make(chan []models.Driver)
+	go GetDrivers(driverChan)
 
-	positions := GetPositions(meeting.MeetingKey, session.Key)
+	positionsChan := make(chan []models.Position)
+	go GetPositions(meeting.MeetingKey, session.Key, positionsChan)
 
 	intervals := make([]models.Interval, 0)
 	if strings.ToLower(session.Name) == "race" {
-		intervals = GetIntervals(meeting.MeetingKey, session.Key)
+		intervalsChan := make(chan []models.Interval)
+		go GetIntervals(meeting.MeetingKey, session.Key, intervalsChan)
+
+		intervals = <-intervalsChan
 	}
+
+	drivers := <-driverChan
+	positions := <-positionsChan
 
 	return models.Event{
 		Meeting:   meeting,
@@ -80,7 +89,7 @@ func GetSession(meetingKey int) models.Session {
 	return sessions[0]
 }
 
-func GetDrivers() []models.Driver {
+func GetDrivers(ch chan []models.Driver) {
 
 	uri := fmt.Sprintf("%s%s", baseUri, "/drivers?meeting_key=latest&session_key=latest")
 
@@ -94,7 +103,7 @@ func GetDrivers() []models.Driver {
 		panic(err)
 	}
 
-	return drivers
+	ch <- drivers
 }
 
 type Position struct {
@@ -135,7 +144,7 @@ func GetBody(uri string) ([]byte, error) {
 	return body, nil
 }
 
-func GetPositions(meetingKey, sessionKey int) []models.Position {
+func GetPositions(meetingKey, sessionKey int, ch chan []models.Position) {
 	uri := fmt.Sprintf("%s%s%d%s%d", baseUri, "position?meeting_key=", meetingKey, "&session_key=", sessionKey)
 
 	body, err := GetBody(uri)
@@ -170,10 +179,10 @@ func GetPositions(meetingKey, sessionKey int) []models.Position {
 		return res[i].Position < res[j].Position
 	})
 
-	return res
+	ch <- res
 }
 
-func GetIntervals(meetingKey, sessionKey int) []models.Interval {
+func GetIntervals(meetingKey, sessionKey int, ch chan []models.Interval) {
 	uri := fmt.Sprintf("%s%s%d%s%d", baseUri, "intervals?meeting_key=", meetingKey, "&session_key=", sessionKey)
 
 	body, err := GetBody(uri)
@@ -197,5 +206,5 @@ func GetIntervals(meetingKey, sessionKey int) []models.Interval {
 		}
 	}
 
-	return intervals
+	ch <- intervals
 }
