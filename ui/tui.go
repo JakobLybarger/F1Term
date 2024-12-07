@@ -87,7 +87,7 @@ func loadTable(event models.Event) table.Model {
 	columns := []table.Column{
 		{Title: "Pos", Width: 3},
 		{Title: "Driver", Width: 10},
-		{Title: "Team", Width: 20},
+		{Title: "Team", Width: 35},
 	}
 
 	isRace := strings.ToLower(event.Session.Name) == "race"
@@ -103,10 +103,13 @@ func loadTable(event models.Event) table.Model {
 	for i, position := range event.Positions {
 		driver := utils.GetDriver(event.Drivers, position.DriverNumber)
 
+		teamStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#" + driver.TeamColor))
+
 		row := table.Row{
 			strconv.Itoa(position.Position),
 			driver.NameAcronym,
-			driver.TeamName,
+			teamStyle.Render(driver.TeamName),
 		}
 
 		if isRace {

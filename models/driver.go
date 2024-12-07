@@ -6,4 +6,5 @@ type Driver struct {
 	NameAcronym string `json:"name_acronym"`
 	Number      int    `json:"driver_number"`
 	TeamName    string `json:"team_name"`
+	TeamColor   string `json:"team_colour"`
 }
