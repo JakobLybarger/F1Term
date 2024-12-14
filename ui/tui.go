@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -10,9 +11,9 @@ import (
 	"github.com/JakobLybarger/formula/service"
 	"github.com/JakobLybarger/formula/utils"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 )
 
 var baseStyle = lipgloss.NewStyle().
@@ -33,7 +34,7 @@ type model struct {
 
 	event models.Event
 
-	table table.Model
+	table *table.Table
 
 	spinner spinner.Model
 
@@ -83,34 +84,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func loadTable(event models.Event) table.Model {
-	columns := []table.Column{
-		{Title: "Pos", Width: 3},
-		{Title: "Driver", Width: 10},
-		{Title: "Team", Width: 35},
-	}
+func loadTable(event models.Event) *table.Table {
+
+	re := lipgloss.NewRenderer(os.Stdout)
+	baseStyle := re.NewStyle().Padding(0, 1)
+	headerStyle := baseStyle.Foreground(lipgloss.Color("252")).Bold(true)
+
+	headers := []string{"Pos", "Driver", "Team"}
 
 	isRace := strings.ToLower(event.Session.Name) == "race"
-
 	if isRace {
-		columns = append(columns, table.Column{
-			Title: "Gap to Leader",
-			Width: 20,
-		})
+		headers = append(headers, "Gap to Leader")
 	}
 
-	rows := make([]table.Row, 20)
-	for i, position := range event.Positions {
+	colors := map[string]string{}
+
+	rows := make([][]string, 0)
+	for _, position := range event.Positions {
 		driver := utils.GetDriver(event.Drivers, position.DriverNumber)
-
-		teamStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#" + driver.TeamColor))
-
-		row := table.Row{
-			strconv.Itoa(position.Position),
-			driver.NameAcronym,
-			teamStyle.Render(driver.TeamName),
-		}
+		colors[driver.TeamName] = driver.TeamColor
+		row := []string{strconv.Itoa(position.Position), driver.NameAcronym, driver.TeamName}
 
 		if isRace {
 			if interval, ok := utils.GetInterval(event.Intervals, position.DriverNumber); ok {
@@ -118,31 +111,33 @@ func loadTable(event models.Event) table.Model {
 			}
 		}
 
-		rows[i] = row
+		rows = append(rows, row)
 	}
 
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithHeight(40),
-	)
+	t := table.New().
+		Headers(headers...).
+		Rows(rows...).
+		Border(lipgloss.NormalBorder()).
+		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
+		StyleFunc(func(row, col int) lipgloss.Style {
 
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
+			if row < 0 {
+				return headerStyle
+			}
 
-	s.Selected = lipgloss.NewStyle()
+			if row >= len(rows) {
+				return baseStyle
+			}
 
-	s.Cell = s.Cell.
-		Padding(0, 1).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true)
+			if col == 2 {
+				team := rows[row][2]
+				if color, ok := colors[team]; ok {
+					return baseStyle.Foreground(lipgloss.Color("#" + color))
+				}
+			}
 
-	t.SetStyles(s)
+			return baseStyle.Foreground(lipgloss.Color("252"))
+		})
 
 	return t
 }
@@ -153,7 +148,7 @@ func (m model) View() string {
 	}
 
 	s := fmt.Sprintf("\n%s - %s\n", m.event.Meeting.OfficialName, m.event.Session.Name)
-	s += fmt.Sprintf("%s\n", baseStyle.Render(m.table.View()))
+	s += fmt.Sprintf("%s\n", m.table)
 
 	return s
 }
