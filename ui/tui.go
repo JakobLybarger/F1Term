@@ -16,10 +16,6 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 )
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
 func InitialModel() model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -118,7 +114,7 @@ func loadTable(event models.Event) *table.Table {
 		Headers(headers...).
 		Rows(rows...).
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
+		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("240"))).
 		StyleFunc(func(row, col int) lipgloss.Style {
 
 			if row < 0 {
@@ -129,7 +125,7 @@ func loadTable(event models.Event) *table.Table {
 				return baseStyle
 			}
 
-			if col == 2 {
+			if col == 1 || col == 2 {
 				team := rows[row][2]
 				if color, ok := colors[team]; ok {
 					return baseStyle.Foreground(lipgloss.Color("#" + color))
