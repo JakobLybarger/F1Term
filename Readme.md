@@ -2,6 +2,8 @@
 
 **F1Term** is a terminal-based application that brings the trhill of live Formula 1 sessions to your terminal. Whether it's Free Practice, Qualifying, or the Race, stay updated with live data in a sleek and responsive text-based interface.
 
+![GIF](./demo.gif)
+
 ## 🌟 Features
 - **Live Session Results**: Watch live standings and updates for any session during a race weekend.
 - **User-Friendly TUI**: Navigate an intuitive Text User Interface built with the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
